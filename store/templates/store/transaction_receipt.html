@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Struk {{ transaction.transaction_code }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Font khas struk */
+            background: #f3f4f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .receipt-container {
+            background: white;
+            width: 300px; /* Lebar kertas 58mm / 80mm */
+            padding: 20px 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-bold { font-weight: bold; }
+        
+        .header h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
+        .header p { margin: 2px 0 10px; font-size: 12px; color: #555; }
+        
+        .divider { border-top: 1px dashed #333; margin: 10px 0; }
+        .double-divider { border-top: 2px solid #333; margin: 10px 0; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table th, table td { padding: 3px 0; vertical-align: top; }
+        table th { text-align: left; font-weight: normal; color: #555;}
+        
+        .summary-table td { padding: 2px 0; font-size: 13px; }
+        .total-row td { font-size: 16px; font-weight: bold; }
+
+        .footer { margin-top: 15px; font-size: 11px; color: #555; }
+
+        /* CSS KHUSUS CETAK */
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .receipt-container { box-shadow: none; width: 100%; padding: 0; }
+            .no-print { display: none; } /* Sembunyikan tombol saat cetak */
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <!-- Tombol Cetak (Hilang saat di-print) -->
+        <div class="no-print text-center" style="margin-bottom: 20px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #00E5A0; color: #000; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                🖨️ Cetak Struk
+            </button>
+            <button onclick="window.close()" style="padding: 10px 20px; background: #ccc; color: #000; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+                Tutup
+            </button>
+        </div>
+
+        <!-- Header Toko -->
+        <div class="header text-center">
+            <h2>{{ store_name }}</h2>
+            <p>Desa Guyangan RT 01 / RW 01 No 19 Madureso - Kec.Kuwarasan</p>
+            <p>Telp: 088-8800-7288</p>
+        </div>
+
+        <div class="double-divider"></div>
+
+        <!-- Info Transaksi -->
+        <table>
+            <tr>
+                <th>No. Transaksi</th>
+                <td class="text-right text-bold">{{ transaction.transaction_code }}</td>
+            </tr>
+            <tr>
+                <th>Tanggal</th>
+                <td class="text-right">{{ transaction.date|date:"d/m/Y H:i" }}</td>
+            </tr>
+            <tr>
+                <th>Kasir</th>
+                <td class="text-right">{{ transaction.created_by.username|default:"Admin" }}</td>
+            </tr>
+            {% if transaction.customer_name %}
+            <tr>
+                <th>Pelanggan</th>
+                <td class="text-right">{{ transaction.customer_name }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <div class="divider"></div>
+
+        <!-- Daftar Barang -->
+        <table>
+            <thead>
+                <tr style="border-bottom: 1px solid #333;">
+                    <th style="width:55%">Item</th>
+                    <th class="text-center" style="width:15%">Qty</th>
+                    <th class="text-right" style="width:30%">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.product_name }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-right">Rp {{ item.subtotal|floatformat:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="divider"></div>
+
+        <!-- Ringkasan Harga -->
+        <table class="summary-table">
+            <tr>
+                <td>Subtotal</td>
+                <td class="text-right">Rp {{ transaction.subtotal|floatformat:0 }}</td>
+            </tr>
+            {% if transaction.discount > 0 %}
+            <tr>
+                <td>Diskon</td>
+                <td class="text-right">- Rp {{ transaction.discount|floatformat:0 }}</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td>TOTAL</td>
+                <td class="text-right">Rp {{ transaction.total|floatformat:0 }}</td>
+            </tr>
+            <tr>
+                <td>Bayar ({{ transaction.get_payment_method_display }})</td>
+                <td class="text-right">Rp {{ transaction.cash_received|floatformat:0 }}</td>
+            </tr>
+            <tr style="font-weight: bold; font-size: 14px;">
+                <td>Kembalian</td>
+                <td class="text-right">Rp {{ transaction.change|floatformat:0 }}</td>
+            </tr>
+        </table>
+
+        <div class="double-divider"></div>
+
+        <!-- Footer -->
+        <div class="footer text-center">
+            <p>Terima kasih atas kunjungan Anda!</p>
+            <p>Barang yang sudah dibeli tidak dapat dikembalikan.</p>
+        </div>
+    </div>
+
+    <script>
+        // Otomatis memunculkan dialog print saat halaman ini dibuka
+        // Kita beri sedikit delay agar render selesai sempurna
+        // window.onload = function() { window.print(); } 
+        // (Dinonaktifkan otomatis, user klik tombol cetak saja agar lebih aman dari popup blocker)
+    </script>
+</body>
+</html>

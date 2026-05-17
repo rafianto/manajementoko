@@ -1,0 +1,104 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Detail Rak{% endblock %}
+{% block nav_shelves %}active{% endblock %}
+{% block page_title %}{{ shelf.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-5">
+    <a href="{% url 'store:shelf_list' %}" class="text-sm text-muted hover:text-accent transition-colors">
+        <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar Rak
+    </a>
+</div>
+
+<!-- Info Rak -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+    <div class="bg-card border border-border rounded-xl p-5 lg:col-span-1">
+        <h3 class="font-display font-semibold text-fg mb-3">Informasi Rak</h3>
+        <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+                <span class="text-muted">Nama</span>
+                <span class="text-fg font-medium">{{ shelf.name }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Lokasi</span>
+                <span class="text-fg">{{ shelf.location }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Kapasitas</span>
+                <span class="text-fg">{{ shelf.capacity }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-muted">Terisi</span>
+                <span class="text-accent font-medium">{{ shelf.total_stock }}</span>
+            </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-border flex gap-2">
+            <a href="{% url 'store:shelf_update' shelf.pk %}" class="btn-secondary text-xs"><i class="fas fa-pen mr-1"></i> Edit</a>
+            <a href="{% url 'store:shelf_delete' shelf.pk %}" class="btn-danger text-xs"><i class="fas fa-trash mr-1"></i> Hapus</a>
+        </div>
+    </div>
+
+    <!-- Form Tambah Produk ke Rak -->
+    <div class="bg-card border border-border rounded-xl p-5 lg:col-span-2">
+        <h3 class="font-display font-semibold text-fg mb-3">Tambah Produk ke Rak</h3>
+        <form method="post">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs text-muted mb-1">Produk</label>
+                    {{ form.product }}
+                </div>
+                <div>
+                    <label class="block text-xs text-muted mb-1">Jumlah</label>
+                    {{ form.quantity }}
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="btn-primary w-full"><i class="fas fa-plus mr-1"></i> Tambah</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Daftar Produk di Rak -->
+<div class="bg-card border border-border rounded-xl overflow-hidden">
+    <div class="px-5 py-3 border-b border-border">
+        <h3 class="font-display font-semibold text-fg">Produk di Rak Ini</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-border text-left">
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Produk</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">SKU</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Jumlah</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Harga Jual</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sp in shelf_products %}
+                <tr class="table-row border-b border-border/50">
+                    <td class="px-4 py-3 text-fg font-medium">{{ sp.product.name }}</td>
+                    <td class="px-4 py-3 text-accent font-mono text-xs">{{ sp.product.sku }}</td>
+                    <td class="px-4 py-3 text-right text-fg">{{ sp.quantity }} {{ sp.product.unit }}</td>
+                    <td class="px-4 py-3 text-right text-fgDim">Rp {{ sp.product.selling_price|floatformat:0 }}</td>
+                    <td class="px-4 py-3 text-center">
+                        <a href="{% url 'store:shelf_product_remove' shelf.pk sp.product.pk %}"
+                           class="p-1.5 rounded hover:bg-danger/10 text-muted hover:text-danger"
+                           onclick="return confirm('Hapus produk ini dari rak?')">
+                            <i class="fas fa-trash text-xs"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-4 py-8 text-center text-muted">Rak ini kosong</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

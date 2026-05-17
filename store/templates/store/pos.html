@@ -1,0 +1,472 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Kasir POS{% endblock %}
+{% block nav_pos %}active{% endblock %}
+{% block page_title %}Kasir (Point of Sales){% endblock %}
+
+{% block content %}
+<input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+<!-- Hidden input untuk base URL struk (lebih aman daripada hardcode di JS) -->
+<input type="hidden" id="receiptUrlBase" value="{% url 'store:transaction_receipt' pk=0 %}">
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5 h-[calc(100vh-11rem)]">
+    
+    <!-- KOLOM KIRI: Daftar Produk -->
+    <div class="xl:col-span-2 flex flex-col bg-card border border-border rounded-xl overflow-hidden">
+        <!-- Search Bar -->
+        <div class="p-4 border-b border-border flex gap-3">
+            <input type="text" id="searchInput" placeholder="🔍 Cari nama barang atau SKU..."
+                   class="form-input flex-1">
+            <select id="categoryFilter" class="form-input max-w-[200px]">
+                <option value="">Semua Kategori</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="flex-1 overflow-y-auto p-4 bg-surface">
+            {% if products %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" id="productContainer">
+                {% for product in products %}
+                <div class="pos-product-card {% if product.total_stock <= 0 %}out-of-stock{% endif %}"
+                     data-id="{{ product.id }}" 
+                     data-name="{{ product.name }}" 
+                     data-price="{{ product.selling_price }}" 
+                     data-stock="{{ product.total_stock }}" 
+                     data-unit="{{ product.unit }}"
+                     data-category="{{ product.category.id|default:'' }}">
+                    
+                    <div class="pos-card-img">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}" class="w-full h-full object-cover" alt="{{ product.name }}">
+                        {% else %}
+                        <div class="w-full h-full bg-card flex items-center justify-center">
+                            <i class="fas fa-box text-muted text-2xl"></i>
+                        </div>
+                        {% endif %}
+                        {% if product.total_stock <= 0 %}
+                        <div class="out-of-stock-overlay">HABIS</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="p-2.5">
+                        <p class="text-xs font-semibold text-fg truncate" title="{{ product.name }}">{{ product.name }}</p>
+                        <p class="text-[10px] text-muted font-mono mt-0.5">{{ product.sku }}</p>
+                        <div class="flex justify-between items-end mt-2">
+                            <p class="text-sm font-bold text-accent">Rp {{ product.selling_price|floatformat:0 }}</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded {% if product.is_low_stock %}bg-danger/20 text-danger{% else %}bg-surface text-muted{% endif %}">
+                                {{ product.total_stock }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="flex flex-col items-center justify-center h-full text-muted">
+                <i class="fas fa-boxes-stacked text-5xl mb-4 text-border"></i>
+                <p class="font-medium">Belum Ada Barang</p>
+                <p class="text-xs mt-1">Tambahkan barang terlebih dahulu di menu Barang Dagangan.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KOLOM KANAN: Keranjang & Pembayaran -->
+    <div class="flex flex-col bg-card border border-border rounded-xl overflow-hidden relative">
+        
+        <!-- CUSTOM SUCCESS MODAL (Hidden by default) -->
+        <div id="posSuccessModal" class="absolute inset-0 bg-bg/90 backdrop-blur-sm z-50 flex-col items-center justify-center p-8 text-center hidden">
+            <div class="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                <i class="fas fa-check-circle text-accent text-4xl"></i>
+            </div>
+            <h2 class="text-2xl font-display font-bold text-fg mb-2">Transaksi Berhasil!</h2>
+            <div class="bg-surface border border-border rounded-lg p-4 mb-6 text-sm w-full max-w-xs mx-auto">
+                <p class="text-muted mb-1">Kode Transaksi</p>
+                <p class="text-accent font-mono font-bold text-lg mb-3" id="modalTrxCode">TRX-XXXX</p>
+                <div class="flex justify-between border-t border-border pt-2">
+                    <span class="text-muted">Total Bayar</span>
+                    <span class="text-fg font-bold" id="modalTotal">Rp 0</span>
+                </div>
+                <div class="flex justify-between mt-1">
+                    <span class="text-muted">Kembalian</span>
+                    <span class="text-accent font-bold" id="modalChange">Rp 0</span>
+                </div>
+            </div>
+            <p class="text-xs text-muted">Halaman akan direset otomatis...</p>
+        </div>
+
+        <!-- Cart Header -->
+        <div class="px-4 py-3 border-b border-border bg-surface flex justify-between items-center">
+            <h3 class="font-display font-bold text-fg flex items-center gap-2">
+                <i class="fas fa-receipt text-accent"></i> Keranjang
+            </h3>
+            <span class="badge badge-info" id="cartCount">0 Item</span>
+        </div>
+
+        <!-- Cart Items List -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-2" id="cartItems">
+            <div class="flex flex-col items-center justify-center h-full text-muted text-sm" id="emptyCartMsg">
+                <i class="fas fa-cart-shopping text-4xl mb-3 text-border"></i>
+                <p>Belum ada barang dipilih</p>
+                <p class="text-xs mt-1">Klik barang di sebelah kiri</p>
+            </div>
+        </div>
+
+        <!-- Cart Summary & Payment -->
+        <div class="border-t border-border p-4 space-y-3 bg-card">
+            <div class="flex justify-between text-sm">
+                <span class="text-muted">Subtotal</span>
+                <span class="text-fg font-medium" id="subtotalDisplay">Rp 0</span>
+            </div>
+            <div class="flex justify-between text-sm items-center">
+                <span class="text-muted">Diskon (Rp)</span>
+                <input type="number" id="discountInput" value="0" min="0" step="1000"
+                       class="form-input w-28 text-right text-sm py-1">
+            </div>
+            <div class="flex justify-between text-xl font-display font-bold border-t border-border pt-3">
+                <span class="text-fg">TOTAL</span>
+                <span class="text-accent" id="totalDisplay">Rp 0</span>
+            </div>
+
+            <div class="space-y-2 pt-2">
+                <select id="paymentMethod" class="form-input text-sm">
+                    <option value="cash">💵 Tunai</option>
+                    <option value="debit">💳 Kartu Debit</option>
+                    <option value="qris">📱 QRIS</option>
+                    <option value="transfer">🏦 Transfer Bank</option>
+                </select>
+                
+                <input type="text" id="customerName" placeholder="Nama pelanggan (opsional)" class="form-input text-sm">
+                
+                <div id="cashSection">
+                    <input type="number" id="cashReceived" placeholder="Uang diterima (Rp)" class="form-input text-sm" min="0">
+                    <div class="flex justify-between text-sm mt-1.5 px-1">
+                        <span class="text-muted">Kembalian:</span>
+                        <span class="text-accent font-bold text-base" id="changeDisplay">Rp 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="processBtn"
+                    class="w-full bg-accent text-bg font-bold py-3 rounded-lg hover:bg-accentDim transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                <i class="fas fa-check-circle"></i> Proses Pembayaran
+            </button>
+            <button id="clearBtn" class="w-full bg-border/50 text-fgDim font-medium py-2 rounded-lg hover:bg-border transition-colors text-xs">
+                <i class="fas fa-xmark mr-1"></i> Kosongkan
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .pos-product-card {
+        cursor: pointer; 
+        transition: all 0.2s; 
+        border: 2px solid #252D3D; 
+        border-radius: 0.75rem; 
+        background: #181D2A; 
+        overflow: hidden;
+        user-select: none;
+    }
+    .pos-product-card:hover { 
+        border-color: #00E5A0; 
+        transform: translateY(-3px); 
+        box-shadow: 0 4px 15px rgba(0, 229, 160, 0.1);
+    }
+    .pos-product-card:active { 
+        transform: scale(0.95); 
+        border-color: #00B37D;
+    }
+    .pos-product-card.out-of-stock { 
+        opacity: 0.35; 
+        pointer-events: none; 
+        filter: grayscale(100%);
+    }
+    .pos-card-img {
+        width: 100%; 
+        height: 90px; 
+        background: #121620; 
+        position: relative;
+    }
+    .out-of-stock-overlay {
+        position: absolute; 
+        inset: 0; 
+        background: rgba(11, 14, 20, 0.85); 
+        color: #FF4D6A; 
+        font-weight: bold; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 0.9rem; 
+        letter-spacing: 1px;
+    }
+    .cart-item-box { 
+        animation: slideIn 0.2s ease-out; 
+        background: #121620; 
+        border: 1px solid #252D3D;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    
+    /* Animation for Success Modal */
+    #posSuccessModal:not(.hidden) {
+        display: flex;
+        animation: fadeInOverlay 0.3s ease-out forwards;
+    }
+    @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ===== STATE =====
+    let cart = [];
+
+    // ===== DOM ELEMENTS =====
+    const productContainer = document.getElementById('productContainer');
+    const cartItemsContainer = document.getElementById('cartItems');
+    const cartCountEl = document.getElementById('cartCount');
+    const subtotalDisplayEl = document.getElementById('subtotalDisplay');
+    const totalDisplayEl = document.getElementById('totalDisplay');
+    const discountInputEl = document.getElementById('discountInput');
+    const cashReceivedEl = document.getElementById('cashReceived');
+    const changeDisplayEl = document.getElementById('changeDisplay');
+    const processBtnEl = document.getElementById('processBtn');
+    const clearBtnEl = document.getElementById('clearBtn');
+    const searchInputEl = document.getElementById('searchInput');
+    const categoryFilterEl = document.getElementById('categoryFilter');
+    const paymentMethodEl = document.getElementById('paymentMethod');
+    const cashSectionEl = document.getElementById('cashSection');
+    const csrfTokenEl = document.getElementById('csrfToken');
+    const receiptUrlBaseEl = document.getElementById('receiptUrlBase');
+    
+    // Modal Elements
+    const successModal = document.getElementById('posSuccessModal');
+    const modalTrxCode = document.getElementById('modalTrxCode');
+    const modalTotal = document.getElementById('modalTotal');
+    const modalChange = document.getElementById('modalChange');
+
+    // ===== EVENT: KLIK PRODUK =====
+    if (productContainer) {
+        productContainer.addEventListener('click', function(e) {
+            const card = e.target.closest('.pos-product-card');
+            if (!card || card.classList.contains('out-of-stock')) return;
+
+            const productId = parseInt(card.dataset.id);
+            const name = card.dataset.name;
+            const price = parseFloat(card.dataset.price);
+            const stock = parseInt(card.dataset.stock);
+            const unit = card.dataset.unit;
+
+            addToCart(productId, name, price, stock, unit);
+        });
+    }
+
+    // ===== EVENT: CARI PRODUK =====
+    if (searchInputEl) {
+        searchInputEl.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.pos-product-card').forEach(card => {
+                const name = (card.dataset.name || '').toLowerCase();
+                const sku = (card.querySelector('.text-muted')?.textContent || '').toLowerCase();
+                card.style.display = (name.includes(query) || sku.includes(query)) ? '' : 'none';
+            });
+        });
+    }
+
+    // ===== EVENT: FILTER KATEGORI =====
+    if (categoryFilterEl) {
+        categoryFilterEl.addEventListener('change', function() {
+            const catId = this.value;
+            document.querySelectorAll('.pos-product-card').forEach(card => {
+                card.style.display = (!catId || card.dataset.category === catId) ? '' : 'none';
+            });
+        });
+    }
+
+    // ===== EVENT: DISKON & UANG DITERIMA =====
+    if (discountInputEl) discountInputEl.addEventListener('input', updateTotals);
+    if (cashReceivedEl) cashReceivedEl.addEventListener('input', updateChange);
+    
+    // ===== EVENT: METODE BAYAR =====
+    if (paymentMethodEl) {
+        paymentMethodEl.addEventListener('change', function() {
+            cashSectionEl.style.display = this.value === 'cash' ? 'block' : 'none';
+        });
+    }
+
+    // ===== EVENT: TOMBOL PROSES & KOSONGKAN =====
+    if (processBtnEl) processBtnEl.addEventListener('click', processTransaction);
+    if (clearBtnEl) clearBtnEl.addEventListener('click', clearCart);
+
+
+    // ===== FUNGSI UTAMA =====
+
+    function addToCart(productId, name, price, stock, unit) {
+        if (stock <= 0) return;
+        
+        const existing = cart.find(item => item.productId === productId);
+        if (existing) {
+            if (existing.quantity >= stock) { 
+                alert('Stok tidak cukup! Tersedia: ' + stock); 
+                return; 
+            }
+            existing.quantity++;
+        } else {
+            cart.push({ productId, name, price, quantity: 1, stock, unit });
+        }
+        renderCart();
+    }
+
+    function removeFromCart(index) { 
+        cart.splice(index, 1); 
+        renderCart(); 
+    }
+
+    function changeQuantity(index, delta) {
+        cart[index].quantity += delta;
+        if (cart[index].quantity <= 0) {
+            cart.splice(index, 1);
+        } else if (cart[index].quantity > cart[index].stock) {
+            cart[index].quantity = cart[index].stock; 
+            alert('Stok tidak cukup!');
+        }
+        renderCart();
+    }
+
+    function renderCart() {
+        if (cart.length === 0) {
+            cartItemsContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-muted text-sm">
+                    <i class="fas fa-cart-shopping text-4xl mb-3 text-border"></i>
+                    <p>Belum ada barang dipilih</p>
+                </div>`;
+            processBtnEl.disabled = true;
+        } else {
+            let html = '';
+            cart.forEach((item, i) => {
+                html += `
+                    <div class="cart-item-box">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-sm font-semibold text-fg flex-1 pr-2 leading-tight">${item.name}</p>
+                            <button onclick="window.POS_removeItem(${i})" class="text-muted hover:text-danger text-xs p-1 hover:bg-danger/10 rounded">
+                                <i class="fas fa-trash-can"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <button onclick="window.POS_changeQty(${i}, -1)" class="w-7 h-7 rounded-md bg-border/50 text-fg hover:bg-border flex items-center justify-center font-bold">-</button>
+                                <span class="text-sm font-bold text-fg w-8 text-center">${item.quantity}</span>
+                                <button onclick="window.POS_changeQty(${i}, 1)" class="w-7 h-7 rounded-md bg-border/50 text-fg hover:bg-border flex items-center justify-center font-bold">+</button>
+                            </div>
+                            <p class="text-sm font-bold text-accent">Rp ${(item.price * item.quantity).toLocaleString('id-ID')}</p>
+                        </div>
+                    </div>`;
+            });
+            cartItemsContainer.innerHTML = html;
+            processBtnEl.disabled = false;
+        }
+
+        const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
+        cartCountEl.textContent = totalQty + ' Item';
+        updateTotals();
+    }
+
+    function updateTotals() {
+        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const discount = parseFloat(discountInputEl.value) || 0;
+        const total = Math.max(subtotal - discount, 0);
+
+        subtotalDisplayEl.textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
+        totalDisplayEl.textContent = 'Rp ' + total.toLocaleString('id-ID');
+        updateChange();
+    }
+
+    function updateChange() {
+        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const discount = parseFloat(discountInputEl.value) || 0;
+        const total = Math.max(subtotal - discount, 0);
+        const cash = parseFloat(cashReceivedEl.value) || 0;
+        const change = Math.max(cash - total, 0);
+        changeDisplayEl.textContent = 'Rp ' + change.toLocaleString('id-ID');
+    }
+
+    function clearCart() {
+        cart = []; 
+        renderCart();
+        discountInputEl.value = 0;
+        cashReceivedEl.value = '';
+        document.getElementById('customerName').value = '';
+    }
+
+    async function processTransaction() {
+        if (cart.length === 0) return;
+        
+        processBtnEl.disabled = true; 
+        processBtnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+        const data = {
+            items: cart.map(item => ({ product_id: item.productId, quantity: item.quantity, price: item.price })),
+            payment_method: paymentMethodEl.value,
+            discount: discountInputEl.value || 0,
+            cash_received: cashReceivedEl.value || 0,
+            customer_name: document.getElementById('customerName').value,
+        };
+
+        try {
+            const response = await fetch('{% url "store:pos_process" %}', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': csrfTokenEl.value 
+                },
+                body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // 1. Update dan tampilkan Custom Success Modal
+                modalTrxCode.textContent = result.transaction_code;
+                modalTotal.textContent = 'Rp ' + Number(result.total).toLocaleString('id-ID');
+                modalChange.textContent = 'Rp ' + Number(result.change).toLocaleString('id-ID');
+                successModal.classList.remove('hidden');
+
+                // 2. Buka halaman struk di tab baru
+                if (result.transaction_id && receiptUrlBaseEl) {
+                    // Ambil base URL dari hidden input, ganti angka 0 dengan ID transaksi asli
+                    const receiptUrl = receiptUrlBaseEl.value.replace('0', result.transaction_id);
+                    window.open(receiptUrl, '_blank');
+                }
+
+                // 3. Reset keranjang
+                clearCart();
+
+                // 4. Auto-reload halaman setelah 3 detik untuk mengupdate stok di tampilan
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+
+            } else { 
+                alert('Gagal: ' + result.error); 
+                processBtnEl.disabled = false; 
+                processBtnEl.innerHTML = '<i class="fas fa-check-circle"></i> Proses Pembayaran';
+            }
+        } catch (e) { 
+            alert('Terjadi kesalahan sistem: ' + e.message); 
+            processBtnEl.disabled = false; 
+            processBtnEl.innerHTML = '<i class="fas fa-check-circle"></i> Proses Pembayaran';
+        }
+    }
+
+    // Expose functions to global scope for inline onclick in cart items
+    window.POS_removeItem = removeFromCart;
+    window.POS_changeQty = changeQuantity;
+
+});
+</script>
+{% endblock %}

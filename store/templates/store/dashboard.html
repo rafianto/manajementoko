@@ -1,0 +1,105 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Dashboard - Toko Guyangan Jaya{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-muted font-medium uppercase tracking-wide">Penjualan Hari Ini</span>
+            <div class="w-9 h-9 rounded-lg bg-accent/15 flex items-center justify-center">
+                <i class="fas fa-coins text-accent text-sm"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-display font-bold text-fg">Rp {{ daily.sales_total|floatformat:0 }}</p>
+        <p class="text-xs text-muted mt-1">{{ daily.total_transactions }} transaksi</p>
+    </div>
+
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-muted font-medium uppercase tracking-wide">Laba Bersih Hari Ini</span>
+            <div class="w-9 h-9 rounded-lg bg-info/15 flex items-center justify-center">
+                <i class="fas fa-chart-line text-info text-sm"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-display font-bold {% if daily.net_income >= 0 %}text-accent{% else %}text-danger{% endif %}">
+            Rp {{ daily.net_income|floatformat:0 }}
+        </p>
+        <p class="text-xs text-muted mt-1">Laba kotor + pemasukan - pengeluaran</p>
+    </div>
+
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-muted font-medium uppercase tracking-wide">Pengeluaran Hari Ini</span>
+            <div class="w-9 h-9 rounded-lg bg-danger/15 flex items-center justify-center">
+                <i class="fas fa-arrow-down text-danger text-sm"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-display font-bold text-danger">Rp {{ daily.expenses|floatformat:0 }}</p>
+        <p class="text-xs text-muted mt-1">Biaya operasional</p>
+    </div>
+
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-muted font-medium uppercase tracking-wide">Total Barang Aktif</span>
+            <div class="w-9 h-9 rounded-lg bg-warning/15 flex items-center justify-center">
+                <i class="fas fa-boxes-stacked text-warning text-sm"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-display font-bold text-fg">{{ total_products }}</p>
+        <p class="text-xs text-muted mt-1">{{ total_shelves }} rak terdaftar</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <!-- Grafik 7 Hari -->
+    <div class="xl:col-span-2 bg-card border border-border rounded-xl p-5">
+        <h3 class="font-display font-semibold text-fg mb-4">Penjualan 7 Hari Terakhir</h3>
+        <div class="space-y-3">
+            {% for day in last_7_days %}
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-muted w-20 flex-shrink-0">{{ day.date|date:"d M" }}</span>
+                <div class="flex-1 bg-surface rounded-full h-7 overflow-hidden relative">
+                    {% if day.sales_total > 0 %}
+                    <div class="h-full rounded-full bg-gradient-to-r from-accent to-accentDim" style="width: 100%;"></div>
+                    {% else %}
+                    <div class="h-full rounded-full bg-border" style="width: 2%;"></div>
+                    {% endif %}
+                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-fg">
+                        Rp {{ day.sales_total|floatformat:0 }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Stok Rendah -->
+    <div class="bg-card border border-border rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-semibold text-fg">Stok Rendah</h3>
+            <span class="badge badge-danger">{{ low_stock_products|length }}</span>
+        </div>
+        {% if low_stock_products %}
+        <div class="space-y-2.5 max-h-80 overflow-y-auto">
+            {% for product in low_stock_products %}
+            <div class="flex items-center justify-between p-2.5 bg-surface rounded-lg">
+                <div>
+                    <p class="text-sm font-medium text-fg">{{ product.name }}</p>
+                    <p class="text-xs text-muted">{{ product.sku }}</p>
+                </div>
+                <span class="badge badge-danger">{{ product.total_stock }} {{ product.unit }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <i class="fas fa-check-circle text-accent text-3xl mb-2"></i>
+            <p class="text-sm text-muted">Semua stok aman!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

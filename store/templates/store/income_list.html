@@ -1,0 +1,62 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Pemasukan{% endblock %}
+{% block nav_incomes %}active{% endblock %}
+{% block page_title %}Pemasukan Lain{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row gap-3 mb-5 items-start sm:items-center justify-between">
+    <div class="flex flex-wrap gap-2 items-center">
+        <form method="get" class="flex gap-2">
+            <input type="date" name="date_from" class="form-input max-w-[160px]" value="{{ request.GET.date_from|default:'' }}">
+            <input type="date" name="date_to" class="form-input max-w-[160px]" value="{{ request.GET.date_to|default:'' }}">
+            <button type="submit" class="btn-secondary"><i class="fas fa-filter mr-1"></i> Filter</button>
+        </form>
+        <div class="bg-card border border-border rounded-lg px-3 py-2">
+            <span class="text-xs text-muted">Total:</span>
+            <span class="text-sm font-bold text-accent ml-1">Rp {{ total|floatformat:0 }}</span>
+        </div>
+    </div>
+    <a href="{% url 'store:income_create' %}" class="btn-primary whitespace-nowrap"><i class="fas fa-plus mr-1"></i> Catat Pemasukan</a>
+</div>
+
+<div class="bg-card border border-border rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-border text-left">
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Tanggal</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Kategori</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Deskripsi</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Jumlah</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for income in incomes %}
+                <tr class="table-row border-b border-border/50">
+                    <td class="px-4 py-3 text-fgDim">{{ income.date|date:"d M Y" }}</td>
+                    <td class="px-4 py-3"><span class="badge badge-success">{{ income.get_category_display }}</span></td>
+                    <td class="px-4 py-3 text-fg">{{ income.description }}</td>
+                    <td class="px-4 py-3 text-right text-accent font-medium">Rp {{ income.amount|floatformat:0 }}</td>
+                    <td class="px-4 py-3 text-center">
+                        <form method="post" action="{% url 'store:income_delete' income.pk %}" onsubmit="return confirm('Hapus pemasukan ini?')">
+                            {% csrf_token %}
+                            <button type="submit" class="p-1.5 rounded hover:bg-danger/10 text-muted hover:text-danger">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-4 py-12 text-center text-muted">
+                        <i class="fas fa-arrow-trend-up text-3xl mb-3 block"></i>Belum ada pemasukan lain
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

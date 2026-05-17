@@ -1,0 +1,130 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Laporan Rugi Laba{% endblock %}
+{% block nav_reports %}active{% endblock %}
+{% block page_title %}Laporan Rugi Laba{% endblock %}
+
+{% block content %}
+<!-- Tab Navigasi -->
+<div class="mb-5 flex flex-wrap gap-2">
+    <a href="{% url 'store:report' %}?report_type=daily" class="btn-{% if report_type == 'daily' %}primary{% else %}secondary{% endif %}">Harian</a>
+    <a href="{% url 'store:report' %}?report_type=weekly" class="btn-{% if report_type == 'weekly' %}primary{% else %}secondary{% endif %}">Mingguan</a>
+    <a href="{% url 'store:report' %}?report_type=monthly" class="btn-{% if report_type == 'monthly' %}primary{% else %}secondary{% endif %}">Bulanan</a>
+</div>
+
+{% if report_type == 'daily' %}
+<!-- FORM HARIAN -->
+<form method="get" class="mb-5 flex gap-2 items-end">
+    <input type="hidden" name="report_type" value="daily">
+    <div>
+        <label class="block text-xs text-muted mb-1">Pilih Tanggal</label>
+        <input type="date" name="date" value="{{ target_date|date:'Y-m-d' }}" class="form-input">
+    </div>
+    <button type="submit" class="btn-primary">Lihat</button>
+</form>
+
+<!-- STATS HARIAN -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Penjualan</p><p class="text-xl font-display font-bold text-fg">Rp {{ stats.sales_total|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Laba Kotor (Penjualan)</p><p class="text-xl font-display font-bold text-accent">Rp {{ stats.profit_from_sales|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Pengeluaran Toko</p><p class="text-xl font-display font-bold text-danger">Rp {{ stats.expenses|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Laba Bersih</p><p class="text-xl font-display font-bold {% if stats.net_income >= 0 %}text-accent{% else %}text-danger{% endif %}">Rp {{ stats.net_income|floatformat:0 }}</p></div>
+</div>
+
+{% elif report_type == 'weekly' %}
+<!-- FORM MINGGUAN -->
+<form method="get" class="mb-5 flex gap-2 items-end">
+    <input type="hidden" name="report_type" value="weekly">
+    <div>
+        <label class="block text-xs text-muted mb-1">Mulai Tanggal (Senin)</label>
+        <input type="date" name="start_date" value="{{ stats.start_date|date:'Y-m-d' }}" class="form-input">
+    </div>
+    <button type="submit" class="btn-primary">Lihat</button>
+</form>
+
+<!-- STATS MINGGUAN -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Total Penjualan</p><p class="text-xl font-display font-bold text-fg">Rp {{ stats.sales_total|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Laba Kotor</p><p class="text-xl font-display font-bold text-accent">Rp {{ stats.profit_from_sales|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Pengeluaran</p><p class="text-xl font-display font-bold text-danger">Rp {{ stats.expenses|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Laba Bersih</p><p class="text-xl font-display font-bold {% if stats.net_income >= 0 %}text-accent{% else %}text-danger{% endif %}">Rp {{ stats.net_income|floatformat:0 }}</p></div>
+</div>
+
+<!-- TABEL MINGGUAN -->
+<div class="bg-card border border-border rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-border">
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-left">Hari</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Penjualan</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Laba Kotor</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Pengeluaran</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Laba Bersih</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for day in daily_details %}
+            <tr class="table-row border-b border-border/50">
+                <td class="px-4 py-3 text-fg font-medium">{{ day.date|date:"l, d M Y" }}</td>
+                <td class="px-4 py-3 text-right text-fg">Rp {{ day.sales_total|floatformat:0 }}</td>
+                <td class="px-4 py-3 text-right text-accent">Rp {{ day.profit_from_sales|floatformat:0 }}</td>
+                <td class="px-4 py-3 text-right text-danger">Rp {{ day.expenses|floatformat:0 }}</td>
+                <td class="px-4 py-3 text-right {% if day.net_income >= 0 %}text-accent{% else %}text-danger{% endif %} font-bold">Rp {{ day.net_income|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% elif report_type == 'monthly' %}
+<!-- FORM BULANAN -->
+<form method="get" class="mb-5 flex gap-2 items-end">
+    <input type="hidden" name="report_type" value="monthly">
+    <div>
+        <label class="block text-xs text-muted mb-1">Bulan</label>
+        <input type="number" name="month" min="1" max="12" value="{{ month }}" class="form-input w-20">
+    </div>
+    <div>
+        <label class="block text-xs text-muted mb-1">Tahun</label>
+        <input type="number" name="year" min="2020" value="{{ year }}" class="form-input w-24">
+    </div>
+    <button type="submit" class="btn-primary">Lihat</button>
+</form>
+
+<!-- STATS BULANAN -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Total Penjualan</p><p class="text-xl font-display font-bold text-fg">Rp {{ stats.sales_total|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Laba Kotor</p><p class="text-xl font-display font-bold text-accent">Rp {{ stats.profit_from_sales|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Pengeluaran</p><p class="text-xl font-display font-bold text-danger">Rp {{ stats.expenses|floatformat:0 }}</p></div>
+    <div class="stat-card"><p class="text-xs text-muted uppercase">Laba Bersih</p><p class="text-xl font-display font-bold {% if stats.net_income >= 0 %}text-accent{% else %}text-danger{% endif %}">Rp {{ stats.net_income|floatformat:0 }}</p></div>
+</div>
+
+<!-- TABEL BULANAN -->
+<div class="bg-card border border-border rounded-xl overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-border">
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-left">Minggu</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-left">Rentang</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Penjualan</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Laba Kotor</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Pengeluaran</th>
+                <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Laba Bersih</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in weekly_details %}
+            <tr class="table-row border-b border-border/50">
+                <td class="px-4 py-3 text-fg font-medium">{{ week.week }}</td>
+                <td class="px-4 py-3 text-fgDim">{{ week.start|date:"d M" }} - {{ week.end|date:"d M" }}</td>
+                <td class="px-4 py-3 text-right text-fg">Rp {{ week.sales|floatformat:0 }}</td>
+                <td class="px-4 py-3 text-right text-accent">Rp {{ week.profit|floatformat:0 }}</td>
+                <td class="px-4 py-3 text-right text-danger">Rp {{ week.expenses|floatformat:0 }}</td>
+                <td class="px-4 py-3 text-right {% if week.net >= 0 %}text-accent{% else %}text-danger{% endif %} font-bold">Rp {{ week.net|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

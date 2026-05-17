@@ -1,0 +1,61 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Stok Masuk{% endblock %}
+{% block nav_stockin %}active{% endblock %}
+{% block page_title %}Stok Masuk dari Supplier{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row gap-3 mb-5">
+    <form method="get" class="flex flex-wrap gap-2 flex-1">
+        <input type="date" name="date_from" class="form-input max-w-[160px]" value="{{ request.GET.date_from|default:'' }}">
+        <input type="date" name="date_to" class="form-input max-w-[160px]" value="{{ request.GET.date_to|default:'' }}">
+        <select name="supplier" class="form-input max-w-[180px]">
+            <option value="">Semua Supplier</option>
+            {% for s in suppliers %}
+            <option value="{{ s.id }}" {% if request.GET.supplier == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn-secondary"><i class="fas fa-filter mr-1"></i> Filter</button>
+    </form>
+    <a href="{% url 'store:stockin_create' %}" class="btn-primary inline-flex items-center gap-1.5 whitespace-nowrap">
+        <i class="fas fa-plus"></i> Stok Masuk Baru
+    </a>
+</div>
+
+<div class="bg-card border border-border rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-border text-left">
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Tanggal</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Barang</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Supplier</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Jumlah</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Harga Beli</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase text-right">Total</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase">Rak Tujuan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for si in stockins %}
+                <tr class="table-row border-b border-border/50">
+                    <td class="px-4 py-3 text-fgDim">{{ si.date|date:"d M Y" }}</td>
+                    <td class="px-4 py-3 text-fg font-medium">{{ si.product.name }}</td>
+                    <td class="px-4 py-3 text-fgDim">{{ si.supplier.name|default:"-" }}</td>
+                    <td class="px-4 py-3 text-right text-fg">{{ si.quantity }} {{ si.product.unit }}</td>
+                    <td class="px-4 py-3 text-right text-fgDim">Rp {{ si.purchase_price|floatformat:0 }}</td>
+                    <td class="px-4 py-3 text-right text-accent font-medium">Rp {{ si.total_price|floatformat:0 }}</td>
+                    <td class="px-4 py-3 text-fgDim">{{ si.shelf.name|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-12 text-center text-muted">
+                        <i class="fas fa-truck-ramp-box text-3xl mb-3 block"></i>Belum ada data stok masuk
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

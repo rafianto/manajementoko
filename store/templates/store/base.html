@@ -1,0 +1,299 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Manajemen Toko{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0B0E14',
+                        surface: '#121620',
+                        card: '#181D2A',
+                        border: '#252D3D',
+                        accent: '#00E5A0',
+                        accentDim: '#00B37D',
+                        danger: '#FF4D6A',
+                        warning: '#FFB020',
+                        info: '#3B9EFF',
+                        muted: '#6B7A99',
+                        fg: '#E2E8F0',
+                        fgDim: '#94A3B8',
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        body: ['DM Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #0B0E14; color: #E2E8F0; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Space Grotesk', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #121620; }
+        ::-webkit-scrollbar-thumb { background: #252D3D; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00E5A0; }
+
+        .form-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            background: #121620;
+            border: 1px solid #252D3D;
+            border-radius: 0.5rem;
+            color: #E2E8F0;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #00E5A0;
+            box-shadow: 0 0 0 3px rgba(0,229,160,0.15);
+        }
+        .form-input::placeholder { color: #6B7A99; }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1rem;
+            border-radius: 0.5rem;
+            color: #94A3B8;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .sidebar-link:hover { background: rgba(0,229,160,0.08); color: #00E5A0; }
+        .sidebar-link.active { background: rgba(0,229,160,0.12); color: #00E5A0; border-left: 3px solid #00E5A0; }
+        .sidebar-link i { width: 20px; text-align: center; }
+
+        .stat-card {
+            background: #181D2A;
+            border: 1px solid #252D3D;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { border-color: #00E5A0; transform: translateY(-2px); }
+
+        .table-row { transition: background 0.15s; }
+        .table-row:hover { background: rgba(0,229,160,0.04); }
+
+        .btn-primary {
+            background: #00E5A0;
+            color: #0B0E14;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        .btn-primary:hover { background: #00B37D; transform: translateY(-1px); }
+
+        .btn-danger {
+            background: rgba(255,77,106,0.15);
+            color: #FF4D6A;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        .btn-danger:hover { background: rgba(255,77,106,0.25); }
+
+        .btn-secondary {
+            background: rgba(37,45,61,0.8);
+            color: #94A3B8;
+            font-weight: 500;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        .btn-secondary:hover { background: #252D3D; color: #E2E8F0; }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge-success { background: rgba(0,229,160,0.15); color: #00E5A0; }
+        .badge-danger { background: rgba(255,77,106,0.15); color: #FF4D6A; }
+        .badge-warning { background: rgba(255,176,32,0.15); color: #FFB020; }
+        .badge-info { background: rgba(59,158,255,0.15); color: #3B9EFF; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+
+        .toast {
+            position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999;
+            padding: 0.875rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Mobile sidebar */
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 40; }
+        .sidebar-overlay.active { display: block; }
+        @media (max-width: 1023px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s; position: fixed !important; z-index: 50; }
+            .sidebar.open { transform: translateX(0); }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen">
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar fixed left-0 top-0 h-full w-64 bg-surface border-r border-border flex flex-col z-50 lg:translate-x-0" id="sidebar">
+        <!-- Logo -->
+        <div class="p-5 border-b border-border">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                    <i class="fas fa-store text-accent text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-display font-bold text-fg">Toko Guyangan Jaya</h1>
+                    <p class="text-xs text-muted">Manajemen Toko</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto p-4 space-y-1">
+            <p class="text-xs text-muted uppercase tracking-wider mb-2 px-3">Menu Utama</p>
+            <a href="{% url 'store:dashboard' %}" class="sidebar-link {% block nav_dashboard %}{% endblock %}">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{% url 'store:pos' %}" class="sidebar-link {% block nav_pos %}{% endblock %}">
+                <i class="fas fa-cash-register"></i> Kasir (POS)
+            </a>
+
+            <p class="text-xs text-muted uppercase tracking-wider mt-5 mb-2 px-3">Inventaris</p>
+            <a href="{% url 'store:product_list' %}" class="sidebar-link {% block nav_products %}{% endblock %}">
+                <i class="fas fa-boxes-stacked"></i> Barang Dagangan
+            </a>
+            <a href="{% url 'store:stockin_list' %}" class="sidebar-link {% block nav_stockin %}{% endblock %}">
+                <i class="fas fa-truck-ramp-box"></i> Stok Masuk
+            </a>
+            <a href="{% url 'store:shelf_list' %}" class="sidebar-link {% block nav_shelves %}{% endblock %}">
+                <i class="fas fa-warehouse"></i> Rak Pajangan
+            </a>
+            <a href="{% url 'store:category_list' %}" class="sidebar-link {% block nav_categories %}{% endblock %}">
+                <i class="fas fa-tags"></i> Kategori
+            </a>
+            <a href="{% url 'store:supplier_list' %}" class="sidebar-link {% block nav_suppliers %}{% endblock %}">
+                <i class="fas fa-truck"></i> Supplier
+            </a>
+
+            <p class="text-xs text-muted uppercase tracking-wider mt-5 mb-2 px-3">Keuangan</p>
+            <a href="{% url 'store:transaction_list' %}" class="sidebar-link {% block nav_transactions %}{% endblock %}">
+                <i class="fas fa-receipt"></i> Transaksi
+            </a>
+            <a href="{% url 'store:expense_list' %}" class="sidebar-link {% block nav_expenses %}{% endblock %}">
+                <i class="fas fa-arrow-trend-down"></i> Pengeluaran
+            </a>
+            <a href="{% url 'store:income_list' %}" class="sidebar-link {% block nav_incomes %}{% endblock %}">
+                <i class="fas fa-arrow-trend-up"></i> Pemasukan
+            </a>
+            <a href="{% url 'store:report' %}" class="sidebar-link {% block nav_reports %}{% endblock %}">
+                <i class="fas fa-chart-line"></i> Laporan Rugi Laba
+            </a>
+        </nav>
+
+        <!-- User Info -->
+        <div class="p-4 border-t border-border">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center">
+                    <i class="fas fa-user text-accent text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-fg truncate">{{ request.user.username }}</p>
+                    <p class="text-xs text-muted">Kasir</p>
+                </div>
+                <!-- KODE BARU (BENAR) -->
+                <form method="post" action="{% url 'logout' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-muted hover:text-danger transition-colors cursor-pointer" title="Keluar">
+                        <i class="fas fa-right-from-bracket"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 min-h-screen">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 bg-bg/80 backdrop-blur-xl border-b border-border px-4 lg:px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-muted hover:text-fg p-2">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    <h2 class="text-lg font-display font-semibold text-fg">{% block page_title %}{% endblock %}</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-muted" id="currentTime"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="p-4 lg:p-6 animate-fade-in">
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="toast {% if msg.tags == 'success' %}bg-accent/20 text-accent border border-accent/30{% elif msg.tags == 'error' %}bg-danger/20 text-danger border border-danger/30{% else %}bg-info/20 text-info border border-info/30{% endif %} mb-2">
+                {{ msg }}
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        // Jam real-time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleDateString('id-ID', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            }) + ' ' + now.toLocaleTimeString('id-ID');
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Toggle sidebar mobile
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+
+        // Hapus toast otomatis
+        setTimeout(() => {
+            document.querySelectorAll('.toast').forEach(t => t.style.display = 'none');
+        }, 4000);
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,54 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Supplier{% endblock %}
+{% block nav_suppliers %}active{% endblock %}
+{% block page_title %}Supplier{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-5">
+    <p class="text-sm text-muted">{{ suppliers|length }} supplier terdaftar</p>
+    <a href="{% url 'store:supplier_create' %}" class="btn-primary"><i class="fas fa-plus mr-1"></i> Tambah Supplier</a>
+</div>
+
+<div class="bg-card border border-border rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-border text-left">
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase tracking-wide">Nama</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase tracking-wide">Kontak</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase tracking-wide">Telepon</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase tracking-wide">Email</th>
+                    <th class="px-4 py-3 text-muted font-medium text-xs uppercase tracking-wide text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for supplier in suppliers %}
+                <tr class="table-row border-b border-border/50">
+                    <td class="px-4 py-3 font-medium text-fg">{{ supplier.name }}</td>
+                    <td class="px-4 py-3 text-fgDim">{{ supplier.contact_person|default:"-" }}</td>
+                    <td class="px-4 py-3 text-fgDim">{{ supplier.phone|default:"-" }}</td>
+                    <td class="px-4 py-3 text-fgDim">{{ supplier.email|default:"-" }}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <a href="{% url 'store:supplier_update' supplier.pk %}" class="p-1.5 rounded hover:bg-accent/10 text-muted hover:text-accent">
+                                <i class="fas fa-pen text-xs"></i>
+                            </a>
+                            <a href="{% url 'store:supplier_delete' supplier.pk %}" class="p-1.5 rounded hover:bg-danger/10 text-muted hover:text-danger">
+                                <i class="fas fa-trash text-xs"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-4 py-12 text-center text-muted">
+                        <i class="fas fa-truck text-3xl mb-3 block"></i>Belum ada supplier
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
