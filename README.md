@@ -1,4 +1,4 @@
-System Manajemen Toko
+System Manajemen Toko versi 1 2026 April
 
 Development by : Mulyono Rafianto
 
